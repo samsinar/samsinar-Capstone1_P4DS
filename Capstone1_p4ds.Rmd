@@ -1,0 +1,268 @@
+---
+title: "Capstone 1"
+author: "Samsinar Ilyas"
+date: "`r Sys.Date()`"
+output:
+  prettydoc::html_pretty:
+    theme: cayman
+    highlight: github
+vignette: >
+  %\VignetteIndexEntry{Vignette Title}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# 1. Explanation about the data
+The data is related with direct marketing campaigns of a Portuguese banking institution. The marketing campaigns were based on phone calls. Often, more than one contact to the same client was required, in order to access if the product (bank term deposit) would be ('yes') or not ('no') subscribed.
+
+# 2. Input Data
+Make sure the data is in the same path directory with R project
+```{r}
+bank <- read.csv("bank-full.csv", sep = ";")
+```
+
+## 2.1 Data Inspection
+```{r}
+head(bank)
+```
+
+```{r}
+tail(bank)
+```
+
+```{r}
+dim(bank)
+```
+
+```{r}
+colnames(bank)
+```
+
+From our inspection we can conclude :
+* banks data contain 45211 of rows and 17 of coloumns
+* Each of column name : "age","job","marital","education","default","balance",
+"housing","loan","contact","day","month","duration","campaign","pdays","previous","poutcome","y"   
+
+
+## 2.2. Cleansing Data & Corrections
+
+Check for missing value
+```{r}
+anyNA(bank)
+```
+**Yeay, Nothing Missing Value!!**
+
+
+Change the data type that is not appropriate
+```{r}
+name <- c(2:4, 9, 11, 16, 5, 7, 8, 17)
+bank[ , name] <- lapply(bank[ , name] , factor)
+str(bank)
+```
+There is no missing value and the type of data is appropriate.
+
+The data is ready to analysis!
+
+
+# 3. Exploratory data analysis
+View summary data
+```{r}
+summary(bank)
+```
+
+
+**Let's do the next analysis! **
+
+*1. How many clients subscribed to term deposits and the number of clients who did not subscribe to term deposits in this campaign?*
+
+Let's use method table() to defined count of each category!
+```{r}
+table(bank$y)
+barplot(table(bank$y))
+```
+
+**Answer: Clients subscribed to term deposit is 5289 and Clients didn't subscribed to term deposit is 39922. the clients  who subscribed to term deposit highest than the clients didn't subscribed to term deposit.**
+
+*2. By age, from which category do most of the clients owned by the bank come from?*
+
+Because the dataset does not divide age by category, it is necessary to divide the age by category first.
+
+Create a copy of bank data
+```{r}
+newdata <- bank
+head(newdata)
+```
+
+Let's see range of age
+```{r}
+newdata$age <- as.integer(newdata$age)
+summary(newdata$age)
+```
+
+Create an age category, which is contains of:
+
+- Older Adults (45-65)
+- Adults (26-45)
+- Teens (18-25)
+- Aged (65-80)
+- 80 and over
+
+Create an age category and assign to object newdata
+```{r}
+newdata$age_category <- sapply(newdata$age, FUN = function(x){
+   if(x <= 25){
+      "Teens"
+   }else if(x > 25 & x <= 45){
+      "Adults"
+   }else if(x > 45 & x <= 65){
+     "Older Adults"
+   } else if (x > 65 & x <= 80){
+     "Aged"
+   }else{
+      "80 and over"
+   }
+})
+
+newdata$age_category <- as.factor(newdata$age_category)
+head(newdata, 10)
+```
+
+Yeay, Finally column of age category created! We can find the answer of question number 2..
+
+
+```{r}
+barplot(table(newdata$age_category))
+```
+
+**Based on the data, clients with adults category which is between 26y - 45y are the highest. **
+
+```{r}
+plot(newdata$y, newdata$age)
+```
+
+From the box diagram, it can be concluded that the variation of data based on age varies more for clients with subscription categories.
+
+
+**Now, do subset the data (y = yes). We will process the data only on the client who subscribed a term deposit.**
+
+```{r}
+subscribed_yes <- bank[bank$y == 'yes',]
+dim(subscribed_yes)
+```
+
+
+*3. What is the average balance of the clients who subscribed a term deposit?*
+
+Let's check is there any outlier of the data
+
+```{r}
+boxplot(subscribed_yes$balance)
+```
+
+From the plot, there are outliers. So, we can use the **median** to calculate the mean of balance.
+
+```{r}
+median(subscribed_yes$balance)
+```
+
+**Answer: From the data, mean of balance from clients who subscribed a term deposit is 733**
+
+
+*4. Which age clients subscribed term deposits has the highest balance?*
+
+```{r}
+top_age <- aggregate(balance ~ age, data = newdata, FUN = length)
+top_age <- top_age[order(top_age$balance, decreasing = TRUE), ]
+head(top_age <- top_age[order(top_age$balance, decreasing = TRUE), ], 10)
+```
+
+**Answer: Based on the table, balance are highest at the age of 32 years. In the top 10 data shows that the average high balance is held by clients in their 30s.**
+
+
+*5. Which age clients subscribe to the most term deposits?*
+
+```{r}
+subs_age <- aggregate(y ~ age, data = subscribed_yes, FUN = length)
+subs_age <- subs_age[order(subs_age$y, decreasing = TRUE), ]
+head(subs_age <- subs_age[order(subs_age$y, decreasing = TRUE), ], 10)
+```
+
+**Answer: Based on this data, term deposits are mostly used by clients at the age of 32 years. In the top 10 data shows that term deposits are mostly used by clients in their 30s.**
+
+
+*6. Which marital status is the highest?*
+
+```{r}
+subs_m <- aggregate(y ~ marital, data = subscribed_yes, FUN = length)
+subs_m 
+graphics::barplot(table(subscribed_yes$marital))
+```
+
+**Answer: married is the highest**
+
+
+*7. Which jobs that subscribed the most term deposit?*
+
+```{r}
+subs_job <- aggregate(y ~ job, data = subscribed_yes, FUN = length)
+subs_job <- subs_job[order(subs_job$y, decreasing = TRUE), ]
+subs_job
+```
+
+**Answer: Top job -> Management**
+
+
+*8. Which month is the highest subscribed term deposit?*
+
+```{r}
+f <- aggregate(y ~ month , data = subscribed_yes, FUN = length)
+f <- f[order(f$y, decreasing = TRUE), ]
+f
+```
+
+**Answer: Subscribed term deposit is the highest in May**
+
+
+*9. How correlation between the number of contacts made during the campaign and client subscribed a term deposit in each month?*
+
+First, Created an object for the number of contacts made during the campaign.
+```{r}
+e <- aggregate(campaign ~ month , data = subscribed_yes, FUN = sum)
+e <- e[order(e$campaign, decreasing = TRUE), ]
+e
+```
+
+Now, we can find the correlation between the number of contacts made during the campaign and client subscribed a term deposit in each month
+
+```{r}
+cor(e$campaign, f$y)
+```
+
+**Answer : the correlation is 0.955626 close to 1 (positive correlation), meaning if the value of the campaign goes up, the subscription value of the term deposit goes up, if the value of the campaign down, the subscription value of the term deposit down.**
+
+
+*10. Based on previous campaign at the same client, is it the number of contacts influence the success of campaign?*
+```{r}
+aggregate(previous ~ poutcome, data = subscribed_yes, FUN = sum)
+aggregate(previous ~ poutcome, data = subscribed_yes, FUN = length)
+```
+
+**Answer : Yes, from the table shows the comparation between the number of contacts of each poutcome category. we got the information that the number of contacts from success catgory is 3041 with the clients subscribed term deposit is 978. Note that unknown is the client with the number of contact are 0. **
+
+
+# 4. Conclussion
+
+Based on campaign data from Portuguese banking institutions, the data consisted of a total of 45211 customers. However, there were only 5,289 customers who subscribed to time deposits based on the campaign.Based on age, most clients are from the adult category with the age range 25 years - 45 years. 
+
+In addition, clients in the adult category also subscribed to the most deposits, especially in their 30s. In marital category, married has clients who subscribe to the highest time deposits. This is also related to age, because in the adult category it is very possible for someone to get married.
+
+Thus, the clients in the adult category have a greater chance of subscribing to deposits. So, maybe in the next campaign can be done marketing to more clients in the adult category in order to increase the sales.
+
+
+
+
